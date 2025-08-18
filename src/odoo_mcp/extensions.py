@@ -1,5 +1,5 @@
 """
-Integración de todos los módulos en el servidor MCP principal
+Integration of all modules in the main MCP server
 """
 
 from mcp.server.fastmcp import FastMCP
@@ -13,16 +13,16 @@ from .tools_accounting import register_accounting_tools
 
 def register_all_extensions(mcp: FastMCP) -> None:
     """
-    Registra todas las extensiones (prompts, recursos y herramientas)
-    en el servidor MCP
+    Registers all extensions (prompts, resources, and tools)
+    in the MCP server
     """
-    # Registrar prompts
+    # Register prompts
     register_all_prompts(mcp)
     
-    # Registrar recursos
+    # Register resources
     register_all_resources(mcp)
     
-    # Registrar herramientas
+    # Register tools
     register_sales_tools(mcp)
     register_purchase_tools(mcp)
     register_inventory_tools(mcp)

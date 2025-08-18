@@ -1,5 +1,5 @@
 """
-Actualización del archivo __init__.py para incluir todos los módulos
+Update of the __init__.py file to include all modules
 """
 
 from . import odoo_client
