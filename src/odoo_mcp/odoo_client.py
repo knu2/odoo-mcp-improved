@@ -22,7 +22,7 @@ class OdooClient:
         username,
         password,
         timeout=10,
-        verify_ssl=True,
+        verify_ssl=False,
     ):
         """
         Initialize the Odoo client with connection parameters
@@ -65,10 +65,17 @@ class OdooClient:
 
     def _connect(self):
         """Initialize the XML-RPC connection and authenticate"""
-        # Tạo transport với timeout phù hợp
+        # Create transport with explicit timeouts: HTTPS uses RedirectTransport, HTTP uses TimeoutHTTPTransport
         is_https = self.url.startswith("https://")
-        transport = RedirectTransport(
-            timeout=self.timeout, use_https=is_https, verify_ssl=self.verify_ssl
+        if is_https:
+            transport = RedirectTransport(
+                timeout=self.timeout, use_https=True, verify_ssl=self.verify_ssl
+            )
+        else:
+            transport = TimeoutHTTPTransport(timeout=self.timeout)
+        print(
+            f"  Transport: {'RedirectTransport(HTTPS)' if is_https else 'TimeoutHTTPTransport(HTTP)'}",
+            file=os.sys.stderr,
         )
 
         print(f"Connecting to Odoo at: {self.url}", file=os.sys.stderr)
@@ -78,12 +85,12 @@ class OdooClient:
             file=os.sys.stderr,
         )
 
-        # Thiết lập endpoints
+        # Setup endpoints (explicit transport and allow_none for compatibility)
         self._common = xmlrpc.client.ServerProxy(
-            f"{self.url}/xmlrpc/2/common", transport=transport
+            f"{self.url}/xmlrpc/2/common", transport=transport, allow_none=True
         )
         self._models = xmlrpc.client.ServerProxy(
-            f"{self.url}/xmlrpc/2/object", transport=transport
+            f"{self.url}/xmlrpc/2/object", transport=transport, allow_none=True
         )
 
         # Xác thực và lấy user ID
@@ -101,6 +108,7 @@ class OdooClient:
             )
             if not self.uid:
                 raise ValueError("Authentication failed: Invalid username or password")
+            print(f"Authenticated OK, uid={self.uid}", file=os.sys.stderr)
         except (socket.error, socket.timeout, ConnectionError, TimeoutError) as e:
             print(f"Connection error: {str(e)}", file=os.sys.stderr)
             raise ConnectionError(f"Failed to connect to Odoo server: {str(e)}")
@@ -298,6 +306,16 @@ class OdooClient:
         except Exception as e:
             print(f"Error reading records: {str(e)}", file=os.sys.stderr)
             return []
+
+
+class TimeoutHTTPTransport(xmlrpc.client.Transport):
+    """HTTP transport with explicit timeout to avoid blocking connections"""
+    def __init__(self, timeout=10):
+        super().__init__()
+        self.timeout = timeout
+
+    def make_connection(self, host):
+        return http.client.HTTPConnection(host, timeout=self.timeout)
 
 
 class RedirectTransport(xmlrpc.client.Transport):
